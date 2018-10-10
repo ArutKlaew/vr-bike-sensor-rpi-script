@@ -13,12 +13,12 @@ class Broadcaster:
         self.BroadcasterState = 0
         self.connection = socket.socket()
 
-    def connectToSever(self,ipAdress,port):
-        self.connection.connect((ipAdress,port))
+    def connectToSever(self, ipAdress, port):
+        self.connection.connect((ipAdress, port))
 
     def setId(self, i):
         self.id = i
-        
+
     ###################
     ## PUBLIC GETTER ##
     ###################
@@ -27,15 +27,15 @@ class Broadcaster:
         command = '"tagClient",\n'
         command = command.encode("utf-8")
         self.connection.send(command)
-        
-    def getFrequency(self,i):
+
+    def getFrequency(self, i):
         command = '"getFrequency",'+str(i)+'\n'
         command = command.encode("utf-8")
         self.connection.send(command)
         result = self.connection.recv(1024)
         result = result.decode("utf-8")
         return result
-    
+
     def getVelocity(self):
         command = '"getVelocity",'+str(self.id)+'\n'
         command = command.encode("utf-8")
@@ -50,7 +50,7 @@ class Broadcaster:
         self.connection.send(command)
         result = self.connection.recv(1024)
         result = result.decode("utf-8")
-        
+
         return result
 
     def getBroadcasterState(self):
@@ -64,10 +64,37 @@ class Broadcaster:
     ###################
     ## PUBLIC SETTER ##
     ###################
-    def setFrequency(self,frequency,sensor_num):
+    def setFrequency(self, frequency, sensor_num):
         command = "'setFrequency'," + str(frequency)+','+str(sensor_num)+'\n'
         command = command.encode("utf-8")
         self.connection.send(command)
+
+# p1.tagClient()
+##
+
+
+
+
+def update_frequency(input_pin, sensor_num, previous_frequency, last_time_active, broadcaster):
+
+    input_status = GPIO.input(input_pin)
+    print("Sensor Number:",sensor_num)
+
+
+    if input_status == 1:
+        active_time = time.time()
+        period = active_time - last_time_active
+        frequency = 1 / period
+        print("New Frequency:", frequency / 2000 * 7.5)
+        broadcaster.setFrequency(frequency / 2000 * 7.5, sensor_num)
+        return frequency, active_time
+    else:
+        
+        frequency = (previous_frequency - 0.2) if previous_frequency - 0.2 > 0 else 0
+        print("Old Frequency:", frequency / 2000 * 7.5)
+        broadcaster.setFrequency(frequency / 2000 * 7.5, sensor_num)
+        return frequency, last_time_active
+
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
@@ -77,44 +104,30 @@ second_input_pin = 21
 
 GPIO.setup(first_input_pin, GPIO.IN)
 GPIO.setup(second_input_pin, GPIO.IN)
-        
-p1 = Broadcaster()
-p1.setId(0)
+
+first_broadcaster = Broadcaster()
+first_broadcaster.setId(0)
+
+second_broadcaster = Broadcaster()
+second_broadcaster.setId(1)
 
 hostName = socket.gethostbyname(IP)
-p1.connectToSever(hostName,PORT)
-##p1.tagClient()
-##
-def calculate_frequency(_id,pin, pfs=[0,0,0], readtime1=[time.time() for i in range(3)], readtime2=[0,0,0],frequency = [0,0,0],counter=[0,0,0]):
-    previous_frame_status = pfs
-    sensorReadDetected = bool(GPIO.input(pin) == GPIO.HIGH)
-    statusJustChanged = (previous_frame_status[_id] != sensorReadDetected)
-    print("GPIO status: ", sensorReadDetected)
-    if(not statusJustChanged):
-        frequency[_id] = frequency[_id] - 0.21
-        if(frequency[_id] <= 0):
-            frequency[_id] = 0
-        print("Status unchanged: ", frequency[_id], _id)
-        p1.setFrequency(frequency[_id],_id)
-        counter[_id] = time.time()
-    else:
-        if(statusJustChanged):
-            if(previous_frame_status[_id] == True):
-                readtime2[_id] = time.time()
-                period = readtime2[_id]-readtime1[_id]
-                frequency[_id] = 1/period #frequency celcolatte hyahhh
-                readtime1[_id] = readtime2[_id]
-                p1.setFrequency(frequency[_id],_id)
-                print("Status changed: ", frequency[_id], _id)
-                counter[_id] = time.time()
-        previous_frame_status[_id] = sensorReadDetected
+
+first_broadcaster.connectToSever(hostName, PORT)
+second_broadcaster.connectToSever(hostName, PORT)
+
+active_time = time.time()
+frequencies = [0,0]
+active_times = [active_time, active_time]
+sensor_nums = [0,1]
+pins = [first_input_pin, second_input_pin]
+broadcasters = [first_broadcaster, second_broadcaster]
+
 
 while True:
     try:
-        calculate_frequency(2, first_input_pin)
-        calculate_frequency(1, second_input_pin)
-        sleep(0.1)
+        for i in range(2):
+            frequencies[i], active_times[i] = update_frequency(pins[i], sensor_nums[i], frequencies[i], active_times[i], broadcasters[i])
+        sleep(0.0001)
     except KeyboardInterrupt:
         GPIO.cleanup()
-
-    
