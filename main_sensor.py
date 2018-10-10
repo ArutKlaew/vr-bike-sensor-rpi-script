@@ -62,30 +62,30 @@ class Broadcaster:
     ###################
     ## PUBLIC SETTER ##
     ###################
-    def setFrequency(self, frequency, sensor_num):
-        command = "'setFrequency'," + str(frequency)+','+str(sensor_num)+'\n'
+    def setFrequency(self, frequency, player_id):
+        command = "'setFrequency'," + str(frequency)+','+str(player_id)+'\n'
         command = command.encode("utf-8")
         self.connection.send(command)
 
 
-def update_frequency(input_pin, sensor_num, previous_frequency, last_time_active, broadcaster):
+def update_frequency(input_pin, player_id, previous_frequency, last_time_active, broadcaster):
 
     input_status = GPIO.input(input_pin)
-    print("Sensor Number:", sensor_num)
+    print("Sensor Number:", player_id)
 
     if input_status == 1:
         active_time = time()
         period = active_time - last_time_active
         frequency = 1 / period
         print("New Frequency:", frequency / 2000 * 7.5)
-        broadcaster.setFrequency(frequency / 2000 * 7.5, sensor_num)
+        broadcaster.setFrequency(frequency / 2000 * 7.5, player_id)
         return frequency, active_time
     else:
 
         frequency = (previous_frequency -
                      0.2) if previous_frequency - 0.2 > 0 else 0
         print("Old Frequency:", frequency / 2000 * 7.5)
-        broadcaster.setFrequency(frequency / 2000 * 7.5, sensor_num)
+        broadcaster.setFrequency(frequency / 2000 * 7.5, player_id)
         return frequency, last_time_active
 
 

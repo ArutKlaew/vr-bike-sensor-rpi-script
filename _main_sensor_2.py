@@ -1,7 +1,6 @@
 import RPi.GPIO as GPIO
 import time
 import socket
-from random import randint
 from config import IP, PORT
 from time import sleep
 
@@ -126,7 +125,7 @@ broadcasters = [first_broadcaster, second_broadcaster]
 
 while True:
     try:
-        for i in range(2):
+        for i in range(1):
             frequencies[i], active_times[i] = update_frequency(pins[i], sensor_nums[i], frequencies[i], active_times[i], broadcasters[i])
         sleep(0.0001)
     except KeyboardInterrupt:
