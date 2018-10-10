@@ -1,2 +1,6 @@
-IP = '192.168.0.3'
-PORT = 1996
+IP = 'YOUR_IP'
+PORT = 'YOUR_PORT'
+'''
+IP: String
+PORT: Int
+'''
