@@ -68,7 +68,7 @@ class Broadcaster:
         self.connection.send(command)
 
 
-def update_frequency(input_pin, player_id, previous_frequency, last_time_active, broadcaster):
+def update_frequency(input_pin, player_id, previous_frequency, last_time_active, broadcaster, emission_counter, count):
 
     input_status = GPIO.input(input_pin)
     print("Sensor Number:", player_id)
@@ -78,16 +78,17 @@ def update_frequency(input_pin, player_id, previous_frequency, last_time_active,
         period = active_time - last_time_active
         frequency = 1 / period
         print("New Frequency:", frequency / 2000 * 7.5)
-        broadcaster.setFrequency(frequency / 2000 * 7.5, player_id)
-        return frequency, active_time
+        
     else:
-
-        frequency = (previous_frequency -
-                     0.2) if previous_frequency - 0.2 > 0 else 0
+        active_time = last_time_active
+        frequency = previous_frequency * 0.99999999999
         print("Old Frequency:", frequency / 2000 * 7.5)
+    
+    if count == emission_counter:
         broadcaster.setFrequency(frequency / 2000 * 7.5, player_id)
-        return frequency, last_time_active
+        count = 1
 
+    return count + 1, frequency, active_time
 
 def main():
      # RPI Mode setup
@@ -109,11 +110,13 @@ def main():
 
     frequency = 0
     active_time = time()
+    count = 1
+    emission_counter = 500
 
     # Reading cycle starts
     while True:
         try:
-            frequency, active_time = update_frequency(pin, player_id, frequency, active_time, broadcaster)
+            count, frequency, active_time = update_frequency(pin, player_id, frequency, active_time, broadcaster, emission_counter, count)
         except KeyboardInterrupt:
             GPIO.cleanup()
 
